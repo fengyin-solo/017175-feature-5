@@ -205,15 +205,24 @@
                                 <p class="text-xs md:text-sm text-slate-500">保存多套方案进行对比分析</p>
                             </div>
                             <div class="flex items-center gap-2">
+                                <button @click="toggleExportSelectMode()" x-show="scenarios.length > 0"
+                                    :class="exportSelectMode ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'"
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm rounded-lg transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    合并导出
+                                </button>
                                 <label class="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                                     </svg>
                                     导入
-                                    <input type="file" accept=".json" @change="importScenarios" class="hidden">
+                                    <input type="file" accept=".json,application/json" @change="importScenarios" class="hidden">
                                 </label>
                                 <button @click="exportScenarios()" x-show="scenarios.length > 0"
-                                    class="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                                    title="导出全部已保存方案">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                     </svg>
@@ -238,33 +247,77 @@
                             </button>
                         </div>
 
+                        <!-- 合并导出多选操作条 -->
+                        <div x-show="exportSelectMode" x-cloak x-transition
+                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm text-indigo-700 cursor-pointer select-none">
+                                <input type="checkbox"
+                                    :checked="selectedExportIds.length === scenarios.length && scenarios.length > 0"
+                                    @change="toggleSelectAllExport()"
+                                    class="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                                全选
+                                <span class="text-indigo-500">已选 <span class="font-semibold" x-text="selectedExportIds.length"></span> / <span x-text="scenarios.length"></span> 个方案</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <button @click="toggleExportSelectMode()"
+                                    class="px-3 py-1.5 text-xs md:text-sm text-slate-600 hover:bg-white rounded-lg transition-all">
+                                    取消
+                                </button>
+                                <button @click="exportSelectedScenarios()" :disabled="selectedExportIds.length === 0"
+                                    :class="selectedExportIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-600 shadow-lg shadow-indigo-500/30'"
+                                    class="px-4 py-1.5 text-xs md:text-sm bg-indigo-500 text-white rounded-lg font-medium transition-all">
+                                    合并导出 (<span x-text="selectedExportIds.length"></span>)
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 方案列表 -->
                         <div x-show="scenarios.length > 0" class="space-y-2">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs md:text-sm text-slate-500">已保存方案 (<span x-text="scenarios.length"></span>)</span>
-                                <span class="text-xs text-slate-400">选择2-4个方案进行对比</span>
+                                <span class="text-xs text-slate-400" x-show="!exportSelectMode">选择2-4个方案进行对比</span>
+                                <span class="text-xs text-indigo-500 font-medium" x-show="exportSelectMode" x-cloak>勾选要合并导出的方案</span>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                 <template x-for="scenario in scenarios" :key="scenario.id">
-                                    <div :class="currentScenarioId === scenario.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'"
+                                    <div :class="[
+                                            currentScenarioId === scenario.id && !exportSelectMode ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300',
+                                            selectedExportIds.includes(scenario.id) ? 'ring-2 ring-indigo-400 border-indigo-400' : ''
+                                        ]"
                                         class="relative p-3 border rounded-lg transition-all">
                                         <div class="flex items-start justify-between gap-2">
-                                            <div class="flex-1 min-w-0 cursor-pointer" @click="loadScenario(scenario.id)">
+                                            <div class="flex-1 min-w-0 cursor-pointer" @click="exportSelectMode ? toggleExportSelection(scenario.id) : loadScenario(scenario.id)">
                                                 <p class="font-medium text-slate-800 text-sm truncate" x-text="scenario.name"></p>
                                                 <p class="text-xs text-slate-400">
-                                                    <span x-text="scenario.bids.length"></span> 家单位 · 
+                                                    <span x-text="scenario.bids.length"></span> 家单位 ·
                                                     <span x-text="scenario.config.mode === 'single' ? '单低' : '双低'"></span>
                                                 </p>
                                             </div>
                                             <div class="flex items-center gap-1 flex-shrink-0">
-                                                <label class="flex items-center cursor-pointer p-1 hover:bg-white rounded transition-all">
-                                                    <input type="checkbox" 
+                                                <!-- 合并导出勾选框 -->
+                                                <label x-show="exportSelectMode" x-cloak class="flex items-center cursor-pointer p-1 hover:bg-white rounded transition-all">
+                                                    <input type="checkbox"
+                                                        :checked="selectedExportIds.includes(scenario.id)"
+                                                        @change="toggleExportSelection(scenario.id)"
+                                                        @click.stop
+                                                        class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                                                </label>
+                                                <!-- 对比勾选框 -->
+                                                <label x-show="!exportSelectMode" class="flex items-center cursor-pointer p-1 hover:bg-white rounded transition-all" title="加入对比">
+                                                    <input type="checkbox"
                                                         :checked="compareScenarioIds.includes(scenario.id)"
                                                         @change="toggleCompareScenario(scenario.id)"
                                                         class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
                                                 </label>
-                                                <button @click="deleteScenario(scenario.id)" 
-                                                    class="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all">
+                                                <!-- 单方案导出 -->
+                                                <button x-show="!exportSelectMode" @click.stop="exportSingleScenario(scenario.id)"
+                                                    class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title="导出此方案">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                                    </svg>
+                                                </button>
+                                                <button @click.stop="deleteScenario(scenario.id)" x-show="!exportSelectMode"
+                                                    class="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title="删除方案">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                     </svg>
@@ -272,9 +325,16 @@
                                             </div>
                                         </div>
                                         <!-- 对比标记 -->
-                                        <div x-show="compareScenarioIds.includes(scenario.id)"
+                                        <div x-show="compareScenarioIds.includes(scenario.id) && !exportSelectMode"
                                             class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-500 text-white text-xs rounded-full flex items-center justify-center font-medium"
                                             x-text="compareScenarioIds.indexOf(scenario.id) + 1"></div>
+                                        <!-- 导出勾选标记 -->
+                                        <div x-show="selectedExportIds.includes(scenario.id)" x-cloak
+                                            class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </div>
                                     </div>
                                 </template>
                             </div>
@@ -689,6 +749,164 @@
         <footer class="py-4 md:py-6 text-center text-slate-400 text-xs md:text-sm">
             <p>投标报价计算器 · 仅供模拟测试使用</p>
         </footer>
+
+        <!-- 全局提示 Toast -->
+        <div x-show="toast.visible" x-cloak x-transition.opacity
+            class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[92vw]">
+            <div :class="{
+                    'bg-slate-800': toast.type === 'info',
+                    'bg-emerald-600': toast.type === 'success',
+                    'bg-red-500': toast.type === 'error'
+                }"
+                class="px-4 py-2.5 rounded-xl text-white text-sm shadow-2xl flex items-center gap-2">
+                <svg x-show="toast.type === 'success'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <svg x-show="toast.type === 'error'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span x-text="toast.message"></span>
+            </div>
+        </div>
+
+        <!-- 导入同名方案冲突弹窗 -->
+        <div x-show="importModal.visible" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6">
+            <!-- 遮罩（点击遮罩不改变数据，等同取消） -->
+            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="cancelImport()"></div>
+
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+                x-show="importCurrent" x-transition>
+                <!-- 头部 -->
+                <div class="flex items-start justify-between gap-3 p-4 md:p-6 border-b border-slate-200">
+                    <div class="min-w-0">
+                        <h3 class="text-base md:text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            发现同名方案
+                        </h3>
+                        <p class="text-xs md:text-sm text-slate-500 mt-1">
+                            方案「<span class="font-medium text-slate-700" x-text="importCurrent && importCurrent.name"></span>」已存在，请选择覆盖或跳过（按投标单位与报价逐条比对）
+                        </p>
+                        <p class="text-xs text-slate-400 mt-1" x-show="importModal.exportedAt">
+                            文件导出时间：<span x-text="formatDateTime(importModal.exportedAt)"></span>
+                            <span x-show="importModal.fileMode"> · 评标模式：<span x-text="modeLabelText(importModal.fileMode)"></span></span>
+                        </p>
+                    </div>
+                    <button @click="cancelImport()" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 比对内容 -->
+                <div class="flex-1 overflow-y-auto p-4 md:p-6" x-show="importCurrent && importExisting">
+                    <!-- 双方概览 -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-3">
+                            <p class="text-xs text-indigo-500 font-medium mb-1">导入文件中</p>
+                            <p class="text-sm font-semibold text-slate-800" x-text="importCurrent && importCurrent.name"></p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                <span x-text="importCurrent && importCurrent.bids.length"></span> 家单位 ·
+                                <span x-text="importCurrent && modeLabel(importCurrent.config.mode)"></span>
+                            </p>
+                        </div>
+                        <div class="rounded-xl border-2 border-slate-200 bg-slate-50 p-3">
+                            <p class="text-xs text-slate-500 font-medium mb-1">当前已存在</p>
+                            <p class="text-sm font-semibold text-slate-800" x-text="importExisting && importExisting.name"></p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                <span x-text="importExisting && importExisting.bids.length"></span> 家单位 ·
+                                <span x-text="importExisting && modeLabel(importExisting.config.mode)"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 逐条比对表 -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="text-left py-2.5 px-3 font-medium text-slate-500">投标单位</th>
+                                    <th class="text-right py-2.5 px-3 font-medium text-slate-500">当前报价</th>
+                                    <th class="text-center py-2.5 px-2 font-medium text-slate-500 w-16">比对</th>
+                                    <th class="text-right py-2.5 px-3 font-medium text-slate-500">导入报价</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(row, ri) in importCurrent ? bidCompareRows(importCurrent, importExisting) : []" :key="ri">
+                                    <tr class="border-b border-slate-100 last:border-0"
+                                        :class="{
+                                            'bg-emerald-50/50': row.status === 'added',
+                                            'bg-amber-50/50': row.status === 'changed',
+                                            'bg-slate-50/60': row.status === 'removed'
+                                        }">
+                                        <td class="py-2 px-3">
+                                            <span class="font-medium text-slate-800" x-text="row.name"></span>
+                                            <span x-show="row.status === 'added'" class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">新增</span>
+                                            <span x-show="row.status === 'changed'" class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">报价变化</span>
+                                            <span x-show="row.status === 'removed'" class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600">原有独有</span>
+                                        </td>
+                                        <td class="py-2 px-3 text-right text-slate-600" x-text="row.existingPrice !== null ? Number(row.existingPrice).toFixed(2) + ' 万' : '—'"></td>
+                                        <td class="py-2 px-2 text-center">
+                                            <span x-show="row.status === 'same'" class="text-emerald-500" title="一致">
+                                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            </span>
+                                            <span x-show="row.status === 'changed'" class="text-amber-500 font-bold">≠</span>
+                                            <span x-show="row.status === 'added'" class="text-emerald-500">＋</span>
+                                            <span x-show="row.status === 'removed'" class="text-slate-400">－</span>
+                                        </td>
+                                        <td class="py-2 px-3 text-right font-medium"
+                                            :class="row.status === 'changed' ? 'text-amber-600' : 'text-slate-800'"
+                                            x-text="row.importedPrice !== null ? Number(row.importedPrice).toFixed(2) + ' 万' : '—'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 配置差异提示 -->
+                    <div class="mt-3 p-3 rounded-lg text-xs"
+                        :class="importCurrent && importExisting && JSON.stringify(importCurrent.config) === JSON.stringify(importExisting.config) ? 'bg-slate-50 text-slate-500' : 'bg-amber-50 text-amber-700'">
+                        <template x-if="importCurrent && importExisting && JSON.stringify(importCurrent.config) === JSON.stringify(importExisting.config)">
+                            <span>&check; 评标配置（模式、限价、评分规则）一致</span>
+                        </template>
+                        <template x-if="importCurrent && importExisting && JSON.stringify(importCurrent.config) !== JSON.stringify(importExisting.config)">
+                            <span>! 评标配置存在差异，覆盖后将使用导入文件的配置（<span x-text="importCurrent && modeLabel(importCurrent.config.mode)"></span>模式）</span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="p-4 md:px-6 md:py-4 border-t border-slate-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <p class="text-xs text-slate-400">
+                            待处理同名方案 <span class="font-semibold text-slate-600" x-text="importModal.index + 1"></span> / <span x-text="importModal.queue.length"></span>
+                            · 已新增 <span class="text-emerald-600 font-medium" x-text="importModal.addedCount"></span>
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2 justify-end">
+                            <button @click="resolveImport('skip')"
+                                class="px-3.5 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                                跳过
+                            </button>
+                            <button @click="resolveImport('overwrite')"
+                                class="px-3.5 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-all shadow-lg shadow-indigo-500/30">
+                                覆盖
+                            </button>
+                            <button @click="resolveImport('skipAll')"
+                                class="px-3.5 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
+                                全部跳过
+                            </button>
+                            <button @click="resolveImport('overwriteAll')"
+                                class="px-3.5 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all">
+                                全部覆盖
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 业务逻辑 -->
